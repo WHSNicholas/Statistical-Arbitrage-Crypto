@@ -7,47 +7,32 @@ Title: Statistical Arbitrage Crypto
 Script: Quantitative Research
 
 Authors: Nicholas Wong
-Creation Date: 27th January 2025
-Modification Date: 27th January 2025
+Creation Date: 25th February 2025
+Modification Date: 25th February 2025
 
-Purpose: This script builds a predictive model for the fatality of any given accident using various machine learning
-         techniques. We use PCA for dimension reduction, SMOTE for imbalanced data, and build XGBoost and Neural Network
-         models for classification.
+Purpose: This script builds a statistical arbitrage strategy that tries to discover price-volume patterns that predict
+         returns. Cryptocurrency markets are still relatively new and should be fertile grounds for finding market
+         inefficiencies using statistical arbitrage techniques. The goal of this project is to research profitable
+         momentum and reversal strategies in crypto.
 
-Dependencies: pandas
+Dependencies: pandas, numpy
 
-Instructions: Ensure that the working directory is set to VicRoads-Fatalities
+Instructions:
 
-Data Sources: VicRoad Data obtained from https://discover.data.vic.gov.au/dataset/victoria-road-crash-data
-- Accident Data
-- Vehicle Data
-- Accident Event Data
-- Atmospheric Condition Data
-- Sub DCA Data
-- Person Data
-- Node Data
-- Road Surface Condition Data
-- Accident Location Data
+Data Sources:
 
 Fonts: "CMU Serif.ttf"
 
 Table of Contents:
-1. Data Integration
-  1.1. Preamble
-  1.2. Importing CSV Data
-  1.3. Data Preparation
-  1.4. Data Encoding
-2. Data Cleaning
-  2.1. Structuring Data
-  2.2. NA Cleaning
-3. Data Exploration
-4. Data Transformation
-  4.1. Transformation
-  4.2. Dimension Reduction
+1.
+  1.1.
+2.
+  2.1.
+
 """
 
 # ----------------------------------------------------------------------------------------------------------------------
-# 1. Data Integration
+# 1.
 # ----------------------------------------------------------------------------------------------------------------------
 
 # 1.1. Preamble ----------------------------------------------------------------------------------------------

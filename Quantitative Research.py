@@ -332,7 +332,7 @@ sharpe_1 = portfolio_returns_1.mean() / portfolio_returns_1.std() * ANNUAL_FACTO
 # Heatmap
 plt.figure(figsize=(18, 4))
 sns.heatmap(sharpe_matrix_1, cmap='coolwarm')
-plt.title("Sharpe Ratio by Momentum Window (j) and Lookback Exclusion (i)")
+plt.title("Sharpe Ratio by Lookback Period for Tanh Normalised Momentum Strategy")
 plt.xlabel('Momentum Window (days)')
 plt.ylabel('Lookback Exclusion (days)')
 plt.show()
@@ -379,14 +379,13 @@ sharpe_2 = portfolio_returns_2.mean() / portfolio_returns_2.std() * ANNUAL_FACTO
 # Heatmap
 plt.figure(figsize=(18, 4))
 sns.heatmap(sharpe_matrix_2, cmap='coolwarm')
-plt.title("Sharpe Ratio by Momentum Window (j) and Lookback Exclusion (i) Volatility Adjusted")
+plt.title("SSharpe Ratio by Lookback Period for Volatility Adjusted Momentum Strategy")
 plt.xlabel('Momentum Window (days)')
 plt.ylabel('Lookback Exclusion (days)')
 plt.show()
 
 
-
-# 2.3. Momentum Strategy 3: Rank Based --------------------------------------------------------------
+# 2.3. Momentum Strategy 3: Rank Based -----------------------------------------------------------------------
 max_sharpe_3 = -np.inf
 sharpe_matrix_3 = np.zeros((30, 365))
 
@@ -422,12 +421,12 @@ sharpe_3 = portfolio_returns_3.mean() / portfolio_returns_3.std() * ANNUAL_FACTO
 # Heatmap
 plt.figure(figsize=(18, 4))
 sns.heatmap(sharpe_matrix_3, cmap='coolwarm')
-plt.title("Sharpe Ratio by Momentum Window (j) and Lookback Exclusion (i) Rank Based")
+plt.title("Sharpe Ratio by Lookback Period for Rank Based Momentum Strategy")
 plt.xlabel('Momentum Window (days)')
 plt.ylabel('Lookback Exclusion (days)')
 plt.show()
 
-# 2.3. Momentum Strategy 3: Rank Based --------------------------------------------------------------
+# 2.4. Momentum Strategy 4: Volume and Volatility Adjusted ---------------------------------------------------
 max_sharpe_4 = -np.inf
 sharpe_matrix_4 = np.zeros((30, 365))
 
@@ -476,11 +475,31 @@ sharpe_4 = portfolio_returns_4.mean() / portfolio_returns_4.std() * ANNUAL_FACTO
 # Heatmap
 plt.figure(figsize=(18, 4))
 sns.heatmap(sharpe_matrix_4, cmap='coolwarm')
-plt.title("Sharpe Ratio by Momentum Window (j) and Lookback Exclusion (i) Rank Based")
+plt.title("Sharpe Ratio by Lookback Period for Volatility and Volume Adjusted Momentum Strategy")
 plt.xlabel('Momentum Window (days)')
 plt.ylabel('Lookback Exclusion (days)')
 plt.show()
 
+# 2.4. Reversal Strategy 1: ---------------------------------------------------
+reversal_signal_1 = returns.shift(1).rolling(1).mean(0)
+volatility = returns.shift(1).ewm(span=365, adjust=False).std()
+
+#reversal_signal_1 = reversal_signal_1.div(volatility, axis=0)
+
+
+volume_mean = volume.shift(1).ewm(span=200, adjust=False).mean()
+volume_std = volume.shift(1).ewm(span=200, adjust=False).std()
+volume_zscore = volume.sub(volume_mean, 0).div(volume_std)
+
+reversal_signal_1 = reversal_signal_1.mul(volume_zscore, axis=0).rank(1)
+
+reversal_signal_1 = reversal_signal_1.sub(reversal_signal_1.mean(axis=1), axis=0)
+reversal_signal_1 = reversal_signal_1.div(reversal_signal_1.abs().sum(axis=1), axis=0)
+
+# Performance Metrics
+portfolio_returns_5 = (returns * reversal_signal_1).sum(axis=1)
+cumulative_returns_5 = (1 + portfolio_returns_5).cumprod()
+sharpe_5 = portfolio_returns_5.mean() / portfolio_returns_5.std() * ANNUAL_FACTOR
 
 
 # ----------------------------------------------------------------------------------------------------------------------

@@ -40,10 +40,13 @@ Table of Contents:
 # 1.1. Preamble ----------------------------------------------------------------------------------------------
 # Required Packages
 import pandas as pd
+import numpy as np
 import requests
 import time
 import datetime as dt
-
+import matplotlib.pyplot as plt
+import seaborn as sns
+from tornado.gen import moment
 
 # Constants
 START = dt.datetime(year=2018, month=1, day=1)
@@ -52,10 +55,11 @@ SEED = 2025
 COINGECKO_API_URL = "https://pro-api.coingecko.com/api/v3/"
 COINGECKO_API_KEY = "CG-r7KwanmGv8NrZfAP8EfrtbiD"
 HEADERS = {"x-cg-pro-api-key": COINGECKO_API_KEY}
+ANNUAL_FACTOR = np.sqrt(365)
 
 
 # Functions
-def get_coins(n=100):
+def get_coins(n=200):
     """
     Fetches the top `n` cryptocurrencies by trading volume from the CoinGecko API.
 
@@ -102,7 +106,6 @@ def get_coins(n=100):
     df = response.json()
 
     return [coin["id"] for coin in df]
-
 
 def get_data(coin_id, vs_currency='usd', start_date=START, end_date=END, coverage_threshold=0.60):
     """
@@ -262,39 +265,221 @@ for coin in coins:
     except Exception as e:
         print(f"Error fetching data for {coin}: {e}")
 
+coins = data.keys()
 
+# Extracting Cross Sectional Data
+price = pd.DataFrame(
+    columns=coins,
+    index=pd.to_datetime(data['bitcoin'].index)
+).rename_axis('Date')
 
+returns = pd.DataFrame(
+    columns=coins,
+    index=pd.to_datetime(data['bitcoin'].index)
+).rename_axis('Date')
 
+volume = pd.DataFrame(
+    columns=coins,
+    index=pd.to_datetime(data['bitcoin'].index)
+).rename_axis('Date')
 
+market_cap = pd.DataFrame(
+    columns=coins,
+    index=pd.to_datetime(data['bitcoin'].index)
+).rename_axis('Date')
 
-
-
-
-
-
-
-
-
-
-
+for coin in coins:
+    price[coin] = data[coin]['Price']
+    returns[coin] = data[coin]['Price'].pct_change()
+    volume[coin] = data[coin]['Volume']
+    market_cap[coin] = data[coin]['Market Cap']
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # 2. Strategy Research
 # ----------------------------------------------------------------------------------------------------------------------
-# 2.1. Momentum Strategy -------------------------------------------------------------------------------------
-# Daily Returns
-# returns = pd.DataFrame(
-#     columns=tickers,
-#     index=pd.to_datetime(data['BTCUSDT']['Open Time']).dt.strftime("%Y-%m-%d")
-# ).rename_axis('Date')
-#
-# for ticker in tickers:
-#     returns[ticker] = (data[ticker]['Close'] - data[ticker]['Open']) / data[ticker]['Open']
+# 2.1. Momentum Strategy: Tanh Normalisation -----------------------------------------------------------------
+max_sharpe_1 = -np.inf
+sharpe_matrix_1 = np.zeros((30, 365))
+
+for i in range(1, 31):
+    for j in range(1, 366):
+        # Momentum Signal: Mean returns for last j days excluding the most recent i days
+        umd_strat_1 = np.tanh(returns.shift(i).rolling(window=j, min_periods=1).mean())
+        umd_strat_1 = umd_strat_1.sub(umd_strat_1.mean(axis=1), axis=0)
+        umd_strat_1 = umd_strat_1.div(umd_strat_1.abs().sum(axis=1), axis=0)
+
+        # Performance Metrics
+        portfolio_returns_1 = (returns * umd_strat_1).sum(axis=1)
+
+        sharpe_1 = portfolio_returns_1.mean() / portfolio_returns_1.std() * ANNUAL_FACTOR
+        sharpe_matrix_1[i - 1, j - 1] = sharpe_1
+
+        if sharpe_1 > max_sharpe_1:
+            max_sharpe_1 = sharpe_1
+            best_params_1 = [i, j]
+
+# Best Strategy
+umd_strat_1 = np.tanh(returns.shift(best_params_1[0]).rolling(window=best_params_1[1], min_periods=1).mean())
+umd_strat_1 = umd_strat_1.sub(umd_strat_1.mean(axis=1), axis=0)
+umd_strat_1 = umd_strat_1.div(umd_strat_1.abs().sum(axis=1), axis=0)
+
+# Performance Metrics
+portfolio_returns_1 = (returns * umd_strat_1).sum(axis=1)
+cumulative_returns_1 = (1 + portfolio_returns_1).cumprod()
+sharpe_1 = portfolio_returns_1.mean() / portfolio_returns_1.std() * ANNUAL_FACTOR
+
+# Heatmap
+plt.figure(figsize=(18, 4))
+sns.heatmap(sharpe_matrix_1, cmap='coolwarm')
+plt.title("Sharpe Ratio by Momentum Window (j) and Lookback Exclusion (i)")
+plt.xlabel('Momentum Window (days)')
+plt.ylabel('Lookback Exclusion (days)')
+plt.show()
+
+# 2.2. Momentum Strategy 2: Volatility Adjusted --------------------------------------------------------------
+max_sharpe_2 = -np.inf
+sharpe_matrix_2 = np.zeros((30, 365))
+
+for i in range(1, 31):
+    for j in range(2, 366):
+        # Momentum Signal: Mean returns for last j days excluding the most recent i days
+        momentum_signal = returns.shift(i).rolling(window=j, min_periods=2).mean()
+        volatility = returns.shift(i).rolling(window=j, min_periods=2).std()
+
+        umd_strat_2 = momentum_signal.div(volatility, axis=0)
+
+        umd_strat_2 = umd_strat_2.sub(umd_strat_2.mean(axis=1), axis=0)
+        umd_strat_2 = umd_strat_2.div(umd_strat_2.abs().sum(axis=1), axis=0)
+
+        # Performance Metrics
+        portfolio_returns_2 = (returns * umd_strat_2).sum(axis=1)
+
+        sharpe_2 = portfolio_returns_2.mean() / portfolio_returns_2.std() * ANNUAL_FACTOR
+        sharpe_matrix_2[i - 1, j - 1] = sharpe_2
+
+        if sharpe_2 > max_sharpe_2:
+            max_sharpe_2 = sharpe_2
+            best_params_2 = [i, j]
+
+# Best Strategy
+momentum_signal_2 = returns.shift(best_params_2[0]).rolling(window=best_params_2[1], min_periods=2).mean()
+volatility = returns.shift(best_params_2[0]).rolling(window=best_params_2[1], min_periods=2).std()
+
+umd_strat_2 = momentum_signal_2.div(volatility, axis=0)
+
+umd_strat_2 = umd_strat_2.sub(umd_strat_2.mean(axis=1), axis=0)
+umd_strat_2 = umd_strat_2.div(umd_strat_2.abs().sum(axis=1), axis=0)
+
+# Performance Metrics
+portfolio_returns_2 = (returns * umd_strat_2).sum(axis=1)
+cumulative_returns_2 = (1 + portfolio_returns_2).cumprod()
+sharpe_2 = portfolio_returns_2.mean() / portfolio_returns_2.std() * ANNUAL_FACTOR
+
+# Heatmap
+plt.figure(figsize=(18, 4))
+sns.heatmap(sharpe_matrix_2, cmap='coolwarm')
+plt.title("Sharpe Ratio by Momentum Window (j) and Lookback Exclusion (i) Volatility Adjusted")
+plt.xlabel('Momentum Window (days)')
+plt.ylabel('Lookback Exclusion (days)')
+plt.show()
 
 
 
+# 2.3. Momentum Strategy 3: Rank Based --------------------------------------------------------------
+max_sharpe_3 = -np.inf
+sharpe_matrix_3 = np.zeros((30, 365))
 
+for i in range(1, 31):
+    for j in range(2, 366):
+        # Momentum Signal: Mean returns for last j days excluding the most recent i days
+        momentum_signal = returns.shift(i).rolling(window=j, min_periods=2).mean().rank(1)
+
+        umd_strat_3 = momentum_signal.sub(momentum_signal.mean(axis=1), axis=0)
+        umd_strat_3 = umd_strat_3.div(umd_strat_3.abs().sum(axis=1), axis=0)
+
+        # Performance Metrics
+        portfolio_returns_3 = (returns * umd_strat_3).sum(axis=1)
+
+        sharpe_3 = portfolio_returns_3.mean() / portfolio_returns_3.std() * ANNUAL_FACTOR
+        sharpe_matrix_3[i - 1, j - 1] = sharpe_3
+
+        if sharpe_3 > max_sharpe_3:
+            max_sharpe_3 = sharpe_3
+            best_params_3 = [i, j]
+
+# Best Strategy
+momentum_signal_3 = returns.shift(best_params_3[0]).rolling(window=best_params_3[1], min_periods=2).mean().rank(1)
+
+umd_strat_3 = momentum_signal_3.sub(momentum_signal_3.mean(axis=1), axis=0)
+umd_strat_3 = umd_strat_3.div(umd_strat_3.abs().sum(axis=1), axis=0)
+
+# Performance Metrics
+portfolio_returns_3 = (returns * umd_strat_3).sum(axis=1)
+cumulative_returns_3 = (1 + portfolio_returns_3).cumprod()
+sharpe_3 = portfolio_returns_3.mean() / portfolio_returns_3.std() * ANNUAL_FACTOR
+
+# Heatmap
+plt.figure(figsize=(18, 4))
+sns.heatmap(sharpe_matrix_3, cmap='coolwarm')
+plt.title("Sharpe Ratio by Momentum Window (j) and Lookback Exclusion (i) Rank Based")
+plt.xlabel('Momentum Window (days)')
+plt.ylabel('Lookback Exclusion (days)')
+plt.show()
+
+# 2.3. Momentum Strategy 3: Rank Based --------------------------------------------------------------
+max_sharpe_4 = -np.inf
+sharpe_matrix_4 = np.zeros((30, 365))
+
+for i in range(1, 31):
+    for j in range(2, 366):
+        momentum_signal_4 = returns.shift(i).ewm(span=j, adjust=False).mean()
+        volatility = returns.shift(i).ewm(span=j, adjust=False).std()
+
+        volume_mean = volume.shift(i).ewm(span=j, adjust=False).mean()
+        volume_std  = volume.shift(i).ewm(span=j, adjust=False).std()
+        volume_zscore = volume.sub(volume_mean, 0).div(volume_std)
+
+        umd_strat_4 = (momentum_signal_4.mul(volume_zscore, 0).div(volatility, axis=0)).rank(1)
+
+        umd_strat_4 = umd_strat_4.sub(umd_strat_4.mean(axis=1), axis=0)
+        umd_strat_4 = umd_strat_4.div(umd_strat_4.abs().sum(axis=1), axis=0)
+
+        # Performance Metrics
+        portfolio_returns_4 = (returns * umd_strat_4).sum(axis=1)
+        cumulative_returns_4 = (1 + portfolio_returns_4).cumprod()
+        sharpe_4 = portfolio_returns_4.mean() / portfolio_returns_4.std() * ANNUAL_FACTOR
+        sharpe_matrix_4[i - 1, j - 1] = sharpe_4
+
+        if sharpe_4 > max_sharpe_4:
+            max_sharpe_4 = sharpe_4
+            best_params_4 = [i, j]
+
+# Best Strategy
+momentum_signal_4 = returns.shift(best_params_4[0]).ewm(span=best_params_4[1], adjust=False).mean()
+volatility = returns.shift(best_params_4[0]).ewm(span=best_params_4[1], adjust=False).std()
+
+volume_mean = volume.shift(best_params_4[0]).ewm(span=best_params_4[1], adjust=False).mean()
+volume_std = volume.shift(best_params_4[0]).ewm(span=best_params_4[1], adjust=False).std()
+volume_zscore = volume.sub(volume_mean, 0).div(volume_std)
+
+umd_strat_4 = (momentum_signal_4.mul(volume_zscore, 0).div(volatility, axis=0)).rank(1)
+
+umd_strat_4 = umd_strat_4.sub(umd_strat_4.mean(axis=1), axis=0)
+umd_strat_4 = umd_strat_4.div(umd_strat_4.abs().sum(axis=1), axis=0)
+
+# Performance Metrics
+portfolio_returns_4 = (returns * umd_strat_4).sum(axis=1)
+cumulative_returns_4 = (1 + portfolio_returns_4).cumprod()
+sharpe_4 = portfolio_returns_4.mean() / portfolio_returns_4.std() * ANNUAL_FACTOR
+
+# Heatmap
+plt.figure(figsize=(18, 4))
+sns.heatmap(sharpe_matrix_4, cmap='coolwarm')
+plt.title("Sharpe Ratio by Momentum Window (j) and Lookback Exclusion (i) Rank Based")
+plt.xlabel('Momentum Window (days)')
+plt.ylabel('Lookback Exclusion (days)')
+plt.show()
 
 
 

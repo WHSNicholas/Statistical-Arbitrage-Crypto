@@ -41,6 +41,13 @@ The final breakout strategy is defined by first computing a rolling high and rol
 Each of these strategies were used to create an overall portfolio using Markowitz Mean-Variance Portfolio theory. It does so by finding the optimal weights of each strategy such that we maximise the returns while minimising the variance. The Sharpe ratios and maximum drawdowns for each strategy is outlined below. 
 
 | **Volume Condition**  | **Sharpe Ratio** | **Annualised Returns** | **Annualised Volatility**  | **Maximum Drawdown** | **Weight in Overall Portfolio** |
-|----------------------|--------------------|---------------------------|-----------------------------|
+|-----------------------|------------------|------------------------|----------------------------|----------------------|---------------------------------|
 | **1. Tanh Normalised Momentum** | 1.14055 |  0.9542  |  0.8366  |  -45.53%  |  0.0980  |
-| **2. Volatility Adjusted Momentum** |  1.1753  |  0.4143  |  0.3525  | -40.54%  |  -0.27341  |
+| **2. Volatility Adjusted Momentum** |  1.1753  |  0.4143  |  0.3525  | -40.54%  |  -0.2734  |
+| **3. Rank Based Momentum** |  1.7620  |  0.4853  |  0.2754  | -40.54%  |  1.0000  |
+| **4. Volatility and Volume Adjusted Momentum** |  0.8697  |  0.0733  |  0.0842  | -16.47% |  -0.3169  |
+| **5. Volatility and Volume Adjusted Reversal** |  1.2418  |  0.4299  |  0.3462  | -36.23% |  0.3364  |
+| **6. Price Breakout** |  1.4408  |  0.9622  |  0.6679  | -60.26% |  0.1559  |
+| **Overall Portfolio** |  2.3428  |  0.7370  |  0.3146  | -27.22% |  NA  |
+
+![Alt text](Graphs/cumulative_returns.png)

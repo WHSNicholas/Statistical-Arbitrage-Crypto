@@ -896,7 +896,10 @@ print("Sharpe Ratio:", sharpe_6)
 # ----------------------------------------------------------------------------------------------------------------------
 # Combine the strategy returns into a DataFrame
 strategy_returns = pd.DataFrame({
-    'Momentum': portfolio_returns_4,
+    'Momentum 1': portfolio_returns_1,
+    'Momentum 2': portfolio_returns_2,
+    'Momentum 3': portfolio_returns_3,
+    'Momentum 4': portfolio_returns_4,
     'Reversal': portfolio_returns_5,
     'Breakout': portfolio_returns_6,
 })

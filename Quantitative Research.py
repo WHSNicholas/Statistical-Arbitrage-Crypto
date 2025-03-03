@@ -15,7 +15,7 @@ Purpose:  This script builds a statistical arbitrage strategy that tries to disc
           inefficiencies using statistical arbitrage techniques. The goal of this project is to research profitable
           momentum and reversal strategies in crypto.
 
-Dependencies: pandas, numpy
+Dependencies: pandas, numpy, requests, time, datetime, matplotlib, seaborn, pypfopt
 
 Instructions:
 
@@ -54,7 +54,7 @@ START = dt.datetime(year=2019, month=1, day=1)
 END = dt.datetime(year=2024, month=12, day=31)
 SEED = 2025
 COINGECKO_API_URL = "https://pro-api.coingecko.com/api/v3/"
-COINGECKO_API_KEY = "CG-r7KwanmGv8NrZfAP8EfrtbiD"
+COINGECKO_API_KEY = ""
 HEADERS = {"x-cg-pro-api-key": COINGECKO_API_KEY}
 ANNUAL_FACTOR = np.sqrt(365)
 MKT_COST = 0.0007

@@ -27,8 +27,14 @@ Table of Contents:
 1. Data Integration
   1.1. Preamble
   1.2. Data Wrangling
+  1.3. Transaction Costs
 2. Strategy Research
-  2.1.
+  2.1. Momentum Strategy 1: Tanh Normalised
+  2.2. Momentum Strategy 2: Volatility Adjusted
+  2.3. Momentum Strategy 3: Rank Based
+  2.4. Momentum Strategy 4: Volume and Volatility Adjusted
+  2.5. Reversal Strategy 1
+  2.6. Breakout Strategy 1
 3. Implementation
 
 """
@@ -391,7 +397,7 @@ def get_hourly_data(coin_id, vs_currency='usd', start_date=START, end_date=END, 
 
 # 1.2. Data Wrangling ----------------------------------------------------------------------------------------
 # Historical Data
-coins = get_coins()
+# coins = get_coins()
 daily_data = {}
 hourly_data = {}
 
@@ -438,7 +444,7 @@ coins = ['bitcoin', 'tether', 'ethereum', 'usd-coin', 'ripple', 'solana', 'dogec
 
 # Importing Saved Data
 for coin in coins:
-    hourly_data[coin] = pd.read_csv(f"Hourly Data/{coin}_hourly_data.csv", index_col=0, parse_dates=True)
+    # hourly_data[coin] = pd.read_csv(f"Hourly Data/{coin}_hourly_data.csv", index_col=0, parse_dates=True)
     daily_data[coin] = pd.read_csv(f"Daily Data/{coin}_daily_data.csv", index_col=0, parse_dates=True)
 
 # Extracting Cross Sectional Daily Data
@@ -543,6 +549,14 @@ for i in range(1, 31):
         strat_1_m = strat_1_m.sub(strat_1_m.mean(axis=1), axis=0)
         strat_1_m = strat_1_m.div(strat_1_m.abs().sum(axis=1), axis=0)
 
+        # Smoothing
+        strat_1_m_smoothed = strat_1_m.copy()
+
+        for col in strat_1_m.columns:
+            strat_1_m_smoothed[col] = strat_1_m[col].ewm(alpha=0.35).mean()
+
+        strat_1_m = strat_1_m_smoothed
+
         # Performance Metrics
         portfolio_returns_1 = apply_transaction_costs(strat_1_m, daily_returns, MKT_COST)
         sharpe_1 = portfolio_returns_1.mean() / portfolio_returns_1.std() * ANNUAL_FACTOR
@@ -553,9 +567,17 @@ for i in range(1, 31):
             best_params_1 = [i, j]
 
 # Best Strategy
-strat_1_m = np.tanh(daily_returns.shift(best_params_1[0]).rolling(window=best_params_1[1], min_periods=1).mean())
+strat_1_m = np.tanh(daily_returns.shift(18).rolling(window=365, min_periods=1).mean())
 strat_1_m = strat_1_m.sub(strat_1_m.mean(axis=1), axis=0)
 strat_1_m = strat_1_m.div(strat_1_m.abs().sum(axis=1), axis=0)
+
+# Smoothing
+strat_1_m_smoothed = strat_1_m.copy()
+
+for col in strat_1_m.columns:
+    strat_1_m_smoothed[col] = strat_1_m[col].ewm(alpha=0.35).mean()
+
+strat_1_m = strat_1_m_smoothed
 
 # Performance Metrics
 portfolio_returns_1 = apply_transaction_costs(strat_1_m, daily_returns, MKT_COST)
@@ -586,6 +608,14 @@ for i in range(1, 31):
         strat_2_m = strat_2_m.sub(strat_2_m.mean(axis=1), axis=0)
         strat_2_m = strat_2_m.div(strat_2_m.abs().sum(axis=1), axis=0)
 
+        # Smoothing
+        strat_2_m_smoothed = strat_2_m.copy()
+
+        for col in strat_2_m.columns:
+            strat_2_m_smoothed[col] = strat_2_m[col].ewm(alpha=0.45).mean()
+
+        strat_2_m = strat_2_m_smoothed
+
         # Performance Metrics
         portfolio_returns_2 = apply_transaction_costs(strat_2_m, daily_returns, MKT_COST)
         sharpe_2 = portfolio_returns_2.mean() / portfolio_returns_2.std() * ANNUAL_FACTOR
@@ -603,6 +633,14 @@ strat_2_m = strat_2_m.div(volatility, axis=0)
 
 strat_2_m = strat_2_m.sub(strat_2_m.mean(axis=1), axis=0)
 strat_2_m = strat_2_m.div(strat_2_m.abs().sum(axis=1), axis=0)
+
+# Smoothing
+strat_2_m_smoothed = strat_2_m.copy()
+
+for col in strat_2_m.columns:
+    strat_2_m_smoothed[col] = strat_2_m[col].ewm(alpha=0.45).mean()
+
+strat_2_m = strat_2_m_smoothed
 
 # Performance Metrics
 portfolio_returns_2 = apply_transaction_costs(strat_2_m, daily_returns, MKT_COST)
@@ -631,6 +669,14 @@ for i in range(1, 31):
         strat_3_m = strat_3_m.sub(strat_3_m.mean(axis=1), axis=0)
         strat_3_m = strat_3_m.div(strat_3_m.abs().sum(axis=1), axis=0)
 
+        # Smoothing
+        strat_3_m_smoothed = strat_3_m.copy()
+
+        for col in strat_3_m.columns:
+            strat_3_m_smoothed[col] = strat_3_m[col].ewm(alpha=0.65).mean()
+
+        strat_3_m = strat_3_m_smoothed
+
         # Performance Metrics
         portfolio_returns_3 = apply_transaction_costs(strat_3_m, daily_returns, MKT_COST)
         sharpe_3 = portfolio_returns_3.mean() / portfolio_returns_3.std() * ANNUAL_FACTOR
@@ -645,6 +691,14 @@ strat_3_m = daily_returns.shift(best_params_3[0]).rolling(window=best_params_3[1
 
 strat_3_m = strat_3_m.sub(strat_3_m.mean(axis=1), axis=0)
 strat_3_m = strat_3_m.div(strat_3_m.abs().sum(axis=1), axis=0)
+
+# Smoothing
+strat_3_m_smoothed = strat_3_m.copy()
+
+for col in strat_3_m.columns:
+    strat_3_m_smoothed[col] = strat_3_m[col].ewm(alpha=0.65).mean()
+
+strat_3_m = strat_3_m_smoothed
 
 # Performance Metrics
 portfolio_returns_3 = apply_transaction_costs(strat_3_m, daily_returns, MKT_COST)
@@ -683,7 +737,7 @@ for i in range(1, 31):
         strat_4_m_smoothed = strat_4_m.copy()
 
         for col in strat_4_m.columns:
-            strat_4_m_smoothed[col] = strat_4_m[col].ewm(alpha=0.1).mean()
+            strat_4_m_smoothed[col] = strat_4_m[col].ewm(alpha=0.15).mean()
 
         strat_4_m = strat_4_m_smoothed
 
@@ -715,7 +769,7 @@ strat_4_m = strat_4_m.div(strat_4_m.abs().sum(axis=1), axis=0)
 strat_4_m_smoothed = strat_4_m.copy()
 
 for col in strat_4_m.columns:
-    strat_4_m_smoothed[col] = strat_4_m[col].ewm(alpha=0.1).mean()
+    strat_4_m_smoothed[col] = strat_4_m[col].ewm(alpha=0.15).mean()
 
 strat_4_m = strat_4_m_smoothed
 
@@ -733,7 +787,8 @@ plt.xlabel('Momentum Window (days)')
 plt.ylabel('Lookback Exclusion (days)')
 plt.show()
 
-# 2.5. Reversal Strategy 1: ---------------------------------------------------
+
+# 2.5. Reversal Strategy 1 -----------------------------------------------------------------------------------
 max_sharpe_5 = -np.inf
 sharpe_matrix_5 = np.zeros(365)
 
@@ -759,7 +814,7 @@ for i in range(1, 365+1):
     strat_5_r_smoothed = strat_5_r.copy()
 
     for col in strat_5_r.columns:
-        strat_5_r_smoothed[col] = strat_5_r[col].ewm(alpha=0.1).mean()
+        strat_5_r_smoothed[col] = strat_5_r[col].ewm(alpha=0.45).mean()
 
     strat_5_r = strat_5_r_smoothed
 
@@ -794,7 +849,7 @@ strat_5_r = strat_5_r.div(strat_5_r.abs().sum(axis=1), axis=0)
 strat_5_r_smoothed = strat_5_r.copy()
 
 for col in strat_5_r.columns:
-    strat_5_r_smoothed[col] = strat_5_r[col].ewm(alpha=0.1).mean()
+    strat_5_r_smoothed[col] = strat_5_r[col].ewm(alpha=0.45).mean()
 
 strat_5_r = strat_5_r_smoothed
 
@@ -804,8 +859,7 @@ cumulative_returns_5 = (1 + portfolio_returns_5).cumprod()
 sharpe_5 = portfolio_returns_5.mean() / portfolio_returns_5.std() * ANNUAL_FACTOR
 print(f'Sharpe Ratio for (5) Reversal Strategy: {sharpe_5}')
 
-
-# 2.6. Breakout Strategy 1: ---------------------------------------------------
+# 2.6. Breakout Strategy 1 -----------------------------------------------------------------------------------
 max_sharpe_6 = -np.inf
 sharpe_matrix_6 = np.zeros((75, 75))
 
@@ -830,7 +884,7 @@ for long in range(1, 75):
         strat_6_b_smoothed = strat_6_b.copy()
 
         for col in strat_6_b.columns:
-            strat_6_b_smoothed[col] = strat_6_b[col].ewm(alpha=0.1).mean()
+            strat_6_b_smoothed[col] = strat_6_b[col].ewm(alpha=0.75).mean()
 
         strat_6_b = strat_6_b_smoothed
 
@@ -857,7 +911,7 @@ plt.show()
 
 # Define parameters:
 long = 260  # Rolling highest close
-short = 25  # Rolling lowest close
+short = 30  # Rolling lowest close
 
 # Compute rolling high and low
 rolling_high = daily_price.shift(2).rolling(window=long, min_periods=1).max()
@@ -878,7 +932,7 @@ strat_6_b = strat_6_b.div(strat_6_b.abs().sum(axis=1), axis=0)
 strat_6_b_smoothed = strat_6_b.copy()
 
 for col in strat_6_b.columns:
-    strat_6_b_smoothed[col] = strat_6_b[col].ewm(alpha=0.1).mean()
+    strat_6_b_smoothed[col] = strat_6_b[col].ewm(alpha=0.75).mean()
 
 strat_6_b = strat_6_b_smoothed
 
@@ -888,12 +942,13 @@ cumulative_returns_6 = (1 + portfolio_returns_6).cumprod()
 
 # Calculate the annualized Sharpe ratio
 sharpe_6 = portfolio_returns_6.mean() / portfolio_returns_6.std() * ANNUAL_FACTOR
-print("Sharpe Ratio:", sharpe_6)
+print("Sharpe Ratio for (6) Breakout Strategy:", sharpe_6)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # 3. Implementation
 # ----------------------------------------------------------------------------------------------------------------------
+# 3.1. Portfolio Theory --------------------------------------------------------------------------------------
 # Combine the strategy returns into a DataFrame
 strategy_returns = pd.DataFrame({
     'Momentum 1': portfolio_returns_1,
@@ -933,7 +988,7 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
-
+# 3.2. Drawdowns ---------------------------------------------------------------------------------------------
 def calculate_drawdowns(returns):
     """
     Given a Pandas Series of daily returns, this function calculates the cumulative returns, the running maximum of the
@@ -959,3 +1014,9 @@ for strategy in strategy_returns.columns:
     plt.legend()
     plt.grid(True)
     plt.show()
+
+cum_returns, running_max, drawdowns = calculate_drawdowns(combined_returns)
+max_drawdown = drawdowns.min()
+print(f"Max drawdown: {max_drawdown:.2%}")
+
+cumulative_returns.to_csv("Cumulative Returns.csv")
